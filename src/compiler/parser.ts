@@ -3453,6 +3453,63 @@ namespace Parser {
         }
     }
 
+    function parseModernEnumMember(): EnumMember {
+        const pos = getNodePos();
+        const hasJSDoc = hasPrecedingJSDocComment();
+        const name = parsePropertyName();
+        const initializer = allowInAnd(parseModernEnumCaseInitializer);
+        return withJSDoc(finishNode(factory.createEnumMember(name, initializer), pos), hasJSDoc);
+    }
+
+    function parseModernEnumDelimitedCaseList(kind: ParsingContext): NodeArray<EnumMember> {
+        const saveParsingContext = parsingContext;
+        parsingContext |= 1 << kind;
+        const list: NonNullable<EnumMember>[] = [];
+        const listPos = getNodePos();
+        
+        let commaStart = -1; // Meaning the previous token was not a comma
+
+        while (true) {
+            if (isListElement(kind, /*inErrorRecovery*/ false)) {
+                const startPos = scanner.getTokenFullStart();
+                const result = parseListElement(kind, parseModernEnumMember);
+                list.push(result);
+                commaStart = scanner.getTokenStart();
+
+                if (isListTerminator(kind)) {
+                    break;
+                }
+
+                if (startPos === scanner.getTokenFullStart()) {
+                    // What we're parsing isn't actually remotely recognizable as a element and we've consumed no tokens whatsoever
+                    // Consume a token to advance the parser in some way and avoid an infinite loop
+                    // This can happen when we're speculatively parsing parenthesized expressions which we think may be arrow functions,
+                    // or when a modifier keyword which is disallowed as a parameter name (ie, `static` in strict mode) is supplied
+                    nextToken();
+                }
+
+                continue;
+            }
+
+            if (isListTerminator(kind)) {
+                break;
+            }
+
+            if (abortParsingListOrMoveToNextToken(kind)) {
+                break;
+            }
+        }
+        
+        parsingContext = saveParsingContext;
+        // Recording the trailing comma is deliberately done after the previous
+        // loop, and not just if we see a list terminator. This is because the list
+        // may have ended incorrectly, but it is still important to know if there
+        // was a trailing comma.
+        // Check if the last token was a comma.
+        // Always preserve a trailing comma by marking it on the NodeArray
+        return createNodeArray(list, listPos, /*end*/ undefined, commaStart >= 0);
+    }
+
     // Parses a comma-delimited list of elements
     function parseDelimitedList<T extends Node>(kind: ParsingContext, parseElement: () => T, considerSemicolonAsDelimiter?: boolean): NodeArray<T>;
     function parseDelimitedList<T extends Node | undefined>(kind: ParsingContext, parseElement: () => T, considerSemicolonAsDelimiter?: boolean): NodeArray<NonNullable<T>> | undefined;
@@ -5029,6 +5086,20 @@ namespace Parser {
     }
 
     function parseInitializer(): Expression | undefined {
+        return parseOptional(SyntaxKind.EqualsToken) ? parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true) : undefined;
+    }
+
+    function parseModernEnumCaseInitializer(): Expression | undefined | NodeArray<TypeElement>  {
+        const nextTokenIsOpenBrace = lookAhead(() => {
+            nextToken();
+            return token() == SyntaxKind.OpenBraceToken;
+        })
+
+        if (nextTokenIsOpenBrace) {
+            const typeMembers = parseObjectTypeMembers()
+            return typeMembers
+        }
+
         return parseOptional(SyntaxKind.EqualsToken) ? parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true) : undefined;
     }
 
@@ -8200,24 +8271,12 @@ namespace Parser {
         return withJSDoc(finishNode(node, pos), hasJSDoc);
     }
 
-    // In an ambient declaration, the grammar only allows integer literals as initializers.
-    // In a non-ambient declaration, the grammar allows uninitialized members only in a
-    // ConstantEnumMemberSection, which starts at the beginning of an enum declaration
-    // or any time an integer literal initializer is encountered.
-    function parseEnumMember(): EnumMember {
-        const pos = getNodePos();
-        const hasJSDoc = hasPrecedingJSDocComment();
-        const name = parsePropertyName();
-        const initializer = allowInAnd(parseInitializer);
-        return withJSDoc(finishNode(factory.createEnumMember(name, initializer), pos), hasJSDoc);
-    }
-
     function parseEnumDeclaration(pos: number, hasJSDoc: boolean, modifiers: NodeArray<ModifierLike> | undefined): EnumDeclaration {
         parseExpected(SyntaxKind.EnumKeyword);
         const name = parseIdentifier();
         let members;
         if (parseExpected(SyntaxKind.OpenBraceToken)) {
-            members = doOutsideOfYieldAndAwaitContext(() => parseDelimitedList(ParsingContext.EnumMembers, parseEnumMember));
+            members = doOutsideOfYieldAndAwaitContext(() => parseModernEnumDelimitedCaseList(ParsingContext.EnumMembers));
             parseExpected(SyntaxKind.CloseBraceToken);
         }
         else {

@@ -8355,7 +8355,7 @@ declare namespace ts {
         updateShorthandPropertyAssignment(node: ShorthandPropertyAssignment, name: Identifier, objectAssignmentInitializer: Expression | undefined): ShorthandPropertyAssignment;
         createSpreadAssignment(expression: Expression): SpreadAssignment;
         updateSpreadAssignment(node: SpreadAssignment, expression: Expression): SpreadAssignment;
-        createEnumMember(name: string | PropertyName, initializer?: Expression): EnumMember;
+        createEnumMember(name: string | PropertyName, initializer?: Expression|NodeArray<TypeElement>): EnumMember;
         updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined): EnumMember;
         createSourceFile(statements: readonly Statement[], endOfFileToken: EndOfFileToken, flags: NodeFlags): SourceFile;
         updateSourceFile(node: SourceFile, statements: readonly Statement[], isDeclarationFile?: boolean, referencedFiles?: readonly FileReference[], typeReferences?: readonly FileReference[], hasNoDefaultLib?: boolean, libReferences?: readonly FileReference[]): SourceFile;

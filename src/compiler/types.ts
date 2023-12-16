@@ -8849,8 +8849,8 @@ export interface NodeFactory {
     // Enum
     //
 
-    createEnumMember(name: string | PropertyName, initializer?: Expression): EnumMember;
-    updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined): EnumMember;
+    createEnumMember(name: string | PropertyName, initializer?: Expression | NodeArray<TypeElement>): EnumMember;
+    updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined | NodeArray<TypeElement>): EnumMember;
 
     //
     // Top-level nodes

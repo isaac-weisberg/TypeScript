@@ -6003,7 +6003,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     //
 
     // @api
-    function createEnumMember(name: string | PropertyName, initializer?: Expression) {
+    function createEnumMember(name: string | PropertyName, initializer?: Expression | NodeArray<TypeElement>) {
         const node = createBaseDeclaration<EnumMember>(SyntaxKind.EnumMember);
         node.name = asName(name);
         node.initializer = initializer && parenthesizerRules().parenthesizeExpressionForDisallowedComma(initializer);
@@ -6016,7 +6016,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     }
 
     // @api
-    function updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined) {
+    function updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined | NodeArray<TypeElement>) {
         return node.name !== name
                 || node.initializer !== initializer
             ? update(createEnumMember(name, initializer), node)
