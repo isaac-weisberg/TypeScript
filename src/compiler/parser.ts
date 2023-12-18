@@ -911,8 +911,19 @@ const forEachChildTable: ForEachChildTable = {
             visitNodes(cbNode, cbNodes, node.members);
     },
     [SyntaxKind.EnumMember]: function forEachChildInEnumMember<T>(node: EnumMember, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
-        return visitNode(cbNode, node.name) ||
-            visitNode(cbNode, node.initializer);
+        if (visitNode(cbNode, node.name)) {
+            return
+        }
+
+        switch (node.initializer.kind) {
+        case 'void':
+            return visitNode(cbNode, undefined);
+        case 'expression':
+            return visitNode(cbNode, node.initializer.expression)
+        case 'typeElements':
+            return visitNode(cbNode, undefined)
+        }
+        
     },
     [SyntaxKind.ModuleDeclaration]: function forEachChildInModuleDeclaration<T>(node: ModuleDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
         return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -1127,6 +1138,28 @@ const forEachChildTable: ForEachChildTable = {
     [SyntaxKind.JSDocOverrideTag]: forEachChildInJSDocTag,
     [SyntaxKind.PartiallyEmittedExpression]: forEachChildInPartiallyEmittedExpression,
 };
+
+// enum
+
+type EnumMemberInitializerKindVoid = 'void'
+type EnumMemberInitializerKindExpression = 'expression'
+type EnumMemberInitializerKindTypeElements = 'typeElements'
+
+interface EnumMemberInitializerVoid {
+    kind: EnumMemberInitializerKindVoid
+}
+
+interface EnumMemberInitializerExpression {
+    kind: EnumMemberInitializerKindExpression
+    expression: Expression
+}
+
+interface EnumMemberInitializerTypeElements {
+    kind: EnumMemberInitializerKindTypeElements
+    typeElements: NodeArray<TypeElement>
+}
+
+export type EnumMemberInitializer = EnumMemberInitializerVoid | EnumMemberInitializerExpression | EnumMemberInitializerTypeElements
 
 // shared
 
@@ -5089,7 +5122,7 @@ namespace Parser {
         return parseOptional(SyntaxKind.EqualsToken) ? parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true) : undefined;
     }
 
-    function parseModernEnumCaseInitializer(): Expression | undefined | NodeArray<TypeElement>  {
+    function parseModernEnumCaseInitializer(): EnumMemberInitializer  {
         const nextTokenIsOpenBrace = lookAhead(() => {
             nextToken();
             return token() == SyntaxKind.OpenBraceToken;
@@ -5097,10 +5130,23 @@ namespace Parser {
 
         if (nextTokenIsOpenBrace) {
             const typeMembers = parseObjectTypeMembers()
-            return typeMembers
+            return {
+                kind: 'typeElements',
+                typeElements: typeMembers
+            }
         }
 
-        return parseOptional(SyntaxKind.EqualsToken) ? parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true) : undefined;
+        if (parseOptional(SyntaxKind.EqualsToken)) {
+            const expression = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true)
+            return {
+                kind: 'expression',
+                expression: expression
+            }
+        } else {
+            return {
+                kind: 'void'
+            }
+        }
     }
 
     function parseAssignmentExpressionOrHigher(allowReturnTypeInArrowFunction: boolean): Expression {

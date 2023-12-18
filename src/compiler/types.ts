@@ -2,6 +2,7 @@ import {
     BaseNodeFactory,
     CreateSourceFileOptions,
     EmitHelperFactory,
+    EnumMemberInitializer,
     GetCanonicalFileName,
     MapLike,
     ModeAwareCache,
@@ -3540,7 +3541,7 @@ export interface EnumMember extends NamedDeclaration, JSDocContainer {
     // This does include ComputedPropertyName, but the parser will give an error
     // if it parses a ComputedPropertyName in an EnumMember
     readonly name: PropertyName;
-    readonly initializer?: Expression;
+    readonly initializer: EnumMemberInitializer;
 }
 
 export interface EnumDeclaration extends DeclarationStatement, JSDocContainer {
@@ -8849,8 +8850,8 @@ export interface NodeFactory {
     // Enum
     //
 
-    createEnumMember(name: string | PropertyName, initializer?: Expression | NodeArray<TypeElement>): EnumMember;
-    updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined | NodeArray<TypeElement>): EnumMember;
+    createEnumMember(name: string | PropertyName, initializer: EnumMemberInitializer): EnumMember;
+    updateEnumMember(node: EnumMember, name: PropertyName, initializer: EnumMemberInitializer): EnumMember;
 
     //
     // Top-level nodes

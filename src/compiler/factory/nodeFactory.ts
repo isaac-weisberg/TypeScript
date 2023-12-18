@@ -85,6 +85,7 @@ import {
     EntityName,
     EnumDeclaration,
     EnumMember,
+    EnumMemberInitializer,
     EqualsGreaterThanToken,
     escapeLeadingUnderscores,
     every,
@@ -6003,20 +6004,44 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     //
 
     // @api
-    function createEnumMember(name: string | PropertyName, initializer?: Expression | NodeArray<TypeElement>) {
+    function createEnumMember(name: string | PropertyName, initializer: EnumMemberInitializer) {
         const node = createBaseDeclaration<EnumMember>(SyntaxKind.EnumMember);
         node.name = asName(name);
-        node.initializer = initializer && parenthesizerRules().parenthesizeExpressionForDisallowedComma(initializer);
-        node.transformFlags |= propagateChildFlags(node.name) |
-            propagateChildFlags(node.initializer) |
-            TransformFlags.ContainsTypeScript;
+
+        switch (initializer.kind) {
+        case 'void':
+        case 'typeElements':
+            node.initializer = initializer
+            break
+        case 'expression':
+            const expression = initializer.expression
+            node.initializer = {
+                kind: 'expression',
+                expression: parenthesizerRules().parenthesizeExpressionForDisallowedComma(expression)
+            } 
+            break
+        }
+
+        switch (node.initializer.kind) {
+            case 'void':
+            case 'typeElements':
+                node.transformFlags |= propagateChildFlags(node.name) |
+                    TransformFlags.ContainsTypeScript;
+                break
+            case 'expression':
+                node.transformFlags |= propagateChildFlags(node.name) |
+                    propagateChildFlags(node.initializer.expression) |
+                    TransformFlags.ContainsTypeScript;
+                break
+            }
+
 
         node.jsDoc = undefined; // initialized by parser (JsDocContainer)
         return node;
     }
 
     // @api
-    function updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined | NodeArray<TypeElement>) {
+    function updateEnumMember(node: EnumMember, name: PropertyName, initializer: EnumMemberInitializer) {
         return node.name !== name
                 || node.initializer !== initializer
             ? update(createEnumMember(name, initializer), node)

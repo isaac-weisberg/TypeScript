@@ -5108,6 +5108,26 @@ declare namespace ts {
         readonly expression: Expression;
     }
     type VariableLikeDeclaration = VariableDeclaration | ParameterDeclaration | BindingElement | PropertyDeclaration | PropertyAssignment | PropertySignature | JsxAttribute | ShorthandPropertyAssignment | EnumMember | JSDocPropertyTag | JSDocParameterTag;
+    
+    type EnumMemberInitializerKindVoid = 'void'
+    type EnumMemberInitializerKindExpression = 'expression'
+    type EnumMemberInitializerKindTypeElements = 'typeElements'
+
+    interface EnumMemberInitializerVoid {
+        kind: EnumMemberInitializerKindVoid
+    }
+
+    interface EnumMemberInitializerExpression {
+        kind: EnumMemberInitializerKindExpression
+        expression: Expression
+    }
+
+    interface EnumMemberInitializerTypeElements {
+        kind: EnumMemberInitializerKindTypeElements
+        typeElements: NodeArray<TypeElement>
+    }
+
+    type EnumMemberInitializer = EnumMemberInitializerVoid | EnumMemberInitializerExpression | EnumMemberInitializerTypeElements
     interface ObjectBindingPattern extends Node {
         readonly kind: SyntaxKind.ObjectBindingPattern;
         readonly parent: VariableDeclaration | ParameterDeclaration | BindingElement;
@@ -8355,8 +8375,8 @@ declare namespace ts {
         updateShorthandPropertyAssignment(node: ShorthandPropertyAssignment, name: Identifier, objectAssignmentInitializer: Expression | undefined): ShorthandPropertyAssignment;
         createSpreadAssignment(expression: Expression): SpreadAssignment;
         updateSpreadAssignment(node: SpreadAssignment, expression: Expression): SpreadAssignment;
-        createEnumMember(name: string | PropertyName, initializer?: Expression|NodeArray<TypeElement>): EnumMember;
-        updateEnumMember(node: EnumMember, name: PropertyName, initializer: Expression | undefined): EnumMember;
+        createEnumMember(name: string | PropertyName, initializer: EnumMemberInitializer): EnumMember;
+        updateEnumMember(node: EnumMember, name: PropertyName, initializer: EnumMemberInitializer): EnumMember;
         createSourceFile(statements: readonly Statement[], endOfFileToken: EndOfFileToken, flags: NodeFlags): SourceFile;
         updateSourceFile(node: SourceFile, statements: readonly Statement[], isDeclarationFile?: boolean, referencedFiles?: readonly FileReference[], typeReferences?: readonly FileReference[], hasNoDefaultLib?: boolean, libReferences?: readonly FileReference[]): SourceFile;
         createNotEmittedStatement(original: Node): NotEmittedStatement;
